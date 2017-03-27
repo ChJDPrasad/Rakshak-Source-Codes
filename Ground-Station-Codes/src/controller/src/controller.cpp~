@@ -1,0 +1,118 @@
+#include <controller/controller.h>
+#include <std_msgs/Int8.h>
+#include <sensor_msgs/Joy.h>
+#include <mavros_msgs/OverrideRCIn.h>
+
+ros::Subscriber keyboard_sub, joystick_sub;
+ros::Publisher rc_control_pub;
+mavros_msgs::OverrideRCIn rc_control_msg;
+
+void keyboardCallback(const std_msgs::Int8::ConstPtr& msg) {
+/*  switch (msg->data) {
+    case 52:
+      rc_control_msg.channels[0] = rc_control_msg.channels[0] + 20;
+      if (rc_control_msg.channels[0] > 2000) rc_control_msg.channels[0] = 2000;
+      break;
+    case 54:
+      rc_control_msg.channels[0] = rc_control_msg.channels[0] - 20;
+      if (rc_control_msg.channels[0] < 1000) rc_control_msg.channels[0] = 1000;
+      break;
+    case 50:
+      rc_control_msg.channels[1] = rc_control_msg.channels[1] + 20;
+      if (rc_control_msg.channels[1] > 2000) rc_control_msg.channels[1] = 2000;
+      break;
+    case 56:
+      rc_control_msg.channels[1] = rc_control_msg.channels[1] - 20;
+      if (rc_control_msg.channels[1] < 1000) rc_control_msg.channels[1] = 1000;
+      break;
+    case 119:
+      rc_control_msg.channels[2] = rc_control_msg.channels[2] + 10;
+      if (rc_control_msg.channels[2] > 2000) rc_control_msg.channels[2] = 2000;
+      break;
+    case 122:
+      rc_control_msg.channels[2] = rc_control_msg.channels[2] - 10;
+      if (rc_control_msg.channels[2] < 1000) rc_control_msg.channels[2] = 1000;
+      break;
+    case 97:
+      rc_control_msg.channels[3] = rc_control_msg.channels[3] + 10;
+      if (rc_control_msg.channels[3] > 2000) rc_control_msg.channels[3] = 2000;
+      break;
+    case 100:
+      rc_control_msg.channels[3] = rc_control_msg.channels[3] - 10;
+      if (rc_control_msg.channels[3] < 1000) rc_control_msg.channels[3] = 1000;
+      break;
+    case 102:
+      rc_control_msg.channels[4] = rc_control_msg.channels[4] + 100;
+      if (rc_control_msg.channels[4] > 2000) rc_control_msg.channels[4] = 2000;
+      break;
+    case 114:
+      rc_control_msg.channels[4] = rc_control_msg.channels[4] - 100;
+      if (rc_control_msg.channels[4] < 1000) rc_control_msg.channels[4] = 1000;
+      break;
+    case 109:
+      rc_control_msg.channels[5] = 1000;
+      break;
+    case 106:
+      rc_control_msg.channels[5] = 1500;
+      break;
+    case 117:
+      rc_control_msg.channels[5] = 2000;
+      break;
+    case 107:
+      rc_control_msg.channels[6] = 1000;
+      break;
+    case 108:
+      rc_control_msg.channels[6] = 2000;
+      break;
+    case 98:
+      rc_control_msg.channels[7] = 1000;
+      break;
+    case 110:
+      rc_control_msg.channels[7] = 2000;
+      break;
+  }
+*/}
+
+void joystickCallback(const sensor_msgs::Joy::ConstPtr& msg) {
+  rc_control_msg.channels[0] = 1500 + 500 * msg->axes[0];
+  rc_control_msg.channels[1] = 1500 + 500 * msg->axes[1];
+  rc_control_msg.channels[2] = 1500 - 500 * msg->axes[2];
+  rc_control_msg.channels[3] = 1500 + 500 * msg->axes[4];
+  rc_control_msg.channels[5] = 1500 + 500 * msg->axes[3];
+
+  rc_control_msg.channels[4] = (msg->buttons[0]) ? 2000 : 1000;
+  rc_control_msg.channels[6] = (msg->buttons[1]) ? 2000 : 1000;
+  rc_control_msg.channels[7] = (msg->buttons[4] && !msg->buttons[3]) ? 2000 : ((!msg->buttons[4] && !msg->buttons[3]) ? 1500 : 1000 );
+}
+
+void Init(ros::NodeHandle& _nh) {
+  rc_control_pub = _nh.advertise<mavros_msgs::OverrideRCIn>("/uas/wifi/rc/override", 1,joystickCallback);
+  keyboard_sub   = _nh.subscribe("/qgc/controller/key_event", 1, keyboardCallback);
+  joystick_sub   = _nh.subscribe("/joy", 1, joystickCallback);
+}
+
+void Reset(void) {
+  rc_control_msg.channels[0] = 1500;
+  rc_control_msg.channels[1] = 1500;
+  rc_control_msg.channels[2] = 1000;
+  rc_control_msg.channels[3] = 1500;
+  rc_control_msg.channels[4] = 1000;
+  rc_control_msg.channels[5] = 1000;
+  rc_control_msg.channels[6] = 1000;
+  rc_control_msg.channels[7] = 1000;
+
+  ROS_INFO("[Controller] Publishing controller output to /qgc/controller/rcout");
+}
+
+void LoopPreCallback() {
+}
+
+void LoopPostCallback(void) {
+  rc_control_pub.publish(rc_control_msg);
+}
+
+void Shutdown(int signum) {
+  (void)signum;
+  ros::shutdown();
+  exit(0);
+}
