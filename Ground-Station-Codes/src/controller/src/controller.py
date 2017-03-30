@@ -18,7 +18,7 @@ def JoytoPWM(Joy):
 
 if __name__ == '__main__':
 	rospy.init_node('listener', anonymous=True)
-	pub = rospy.Publisher('PWM',OverrideRCIn,queue_size=10)	
+	pub = rospy.Publisher('/mavros/rc/override',OverrideRCIn,queue_size=10)	
 	rospy.Subscriber("joy", Joy, JoytoPWM)
 	#print('after subs: %s',Joy)
 	rospy.spin()
